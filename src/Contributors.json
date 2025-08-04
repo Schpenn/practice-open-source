@@ -1,0 +1,14 @@
+{
+  "contributors": [
+    {
+      "name": "Your Name",
+      "description": "Here you can write a short description about yourself.",
+      "githubLink": "https://github.com/Schpenn"
+    },
+    {
+      "name": "Espen Bjørnsen",
+      "description": "I made this repo to practice open source contributions and github actions.",
+      "githubLink": "https://github.com/Schpenn"
+    }
+  ]
+}
