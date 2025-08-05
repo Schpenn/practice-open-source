@@ -4,7 +4,11 @@ on:
   push:
     branches:
       - main  # or your default branch
-
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
