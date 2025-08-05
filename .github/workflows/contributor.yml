@@ -1,0 +1,43 @@
+name: Check contribution
+
+on:
+  pull_request:
+
+jobs:
+  check-valid-contributor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for valid fork
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+            echo "PR is not from a fork. Failing."
+            exit 1
+          else
+            echo "PR is from a valid fork."
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check changed files
+        id: check_files
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git diff --name-only origin/${{ github.base_ref }}...HEAD > changed_files.txt
+          cat changed_files.txt
+
+          if [ "$(wc -l < changed_files.txt)" -eq 1 ] && grep -q "src/Contributors.json$" changed_files.txt; then
+            echo "Only Contributors.json has changed."
+          else
+            echo "Other filechanges detected. Failing."
+            exit 1
+          fi
+
+      - name: Check for valid json
+        run: |
+          python -m json.tool src/Contributors.json > /dev/null
+
+      - name: Check for valid data structure
+        run: |
+          git show origin/${{ github.base_ref }}:src/Contributors.json > base_Contributors.json
+          python .github/workflows/contributor_check.py
