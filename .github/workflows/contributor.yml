@@ -1,0 +1,68 @@
+name: Check contribution
+
+on: 
+  pull_request:
+
+jobs:
+  check-valid-contributor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for valid fork
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" = "${{ github.repository }}" ]; then
+            echo "PR is not from a fork. Failing."
+            exit 1
+          else
+            echo "PR is from a valid fork."
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check changed files
+        id: check_files
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git diff --name-only origin/${{ github.base_ref }}...HEAD > changed_files.txt
+          cat changed_files.txt
+
+          if [ "$(wc -l < changed_files.txt)" -eq 1 ] && grep -q "src/Contributors.json$" changed_files.txt; then
+            echo "Only Contributors.json has changed."
+          else
+            echo "Other filechanges detected. Failing."
+            exit 1
+          fi
+
+      - name: Check for valid json
+        run: |
+          python -m json.tool src/Contributors.json > /dev/null
+
+      - name: Check for valid data structure
+        run: |
+          git show origin/${{ github.base_ref }}:src/Contributors.json > base_Contributors.json
+          python -c "
+import json, sys
+def get_structure(obj):
+  if isinstance(obj, dict):
+    return {k: get_structure(v) for k, v in obj.items()}
+  elif isinstance(obj, list):
+    return [get_structure(obj[0])] if obj else[]
+  else:
+    return type(obj).__name__
+with open('src/Contributors.json') as f1, open('base_Contributors.json') as f2:
+  pr_data = json.load(f1)
+  base_data = json.load(f2)
+  pr_count = len(pr_data.get('contributors', []))
+  base_count = len(base_data.get('contributors', []))
+  if pr_count < base_count:
+    print(f'Contributors were removed! PR: {pr_count}, Base: {base_count}')
+    sys.exit(1)
+  else:
+    print(f'Contributors in PR: {pr_count}, Base: {base_count}')
+
+  s1 = get_structure(json.load(f1))
+  s2 = get_structure(json.load(f2))
+if s1 != s2:
+  print(f"Json structure does not match origin")
+  sys.exit(1)
+"
